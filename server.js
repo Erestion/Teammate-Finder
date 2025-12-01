@@ -4,12 +4,13 @@ const http = require('http');
 const { Server } = require("socket.io");
 const path = require('path');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 // Імпортуємо моделі
 const User = require('./models/User');
 const Ad = require('./models/Ad');
 const Chat = require('./models/Chat');
-
+const FRONTEND_ORIGIN = process.env.FRONTEND_URL || process.env.VITE_API_URL || '*';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -20,10 +21,6 @@ const io = new Server(server, {
     }
 });
 
-
-const FRONTEND_ORIGIN = process.env.FRONTEND_URL || process.env.VITE_API_URL || '*';
-
-const cors = require('cors');
 app.use(cors({
     origin: FRONTEND_ORIGIN,
     credentials: true,
