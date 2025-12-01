@@ -11,6 +11,7 @@ const AuthDialog = forwardRef(
     const googleBtnRef = useRef(null);
 
     useEffect(() => {
+	  console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
       if (window.google && googleBtnRef.current) {
         window.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
