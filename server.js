@@ -470,11 +470,15 @@ io.on('connection', (socket) => {
     });
 });
 
-// Запуск сервера
-const PORT = process.env.PORT || 4000;
+app.use(express.static(path.join(__dirname, 'dist')));
+
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
+// Запуск сервера
+const PORT = process.env.PORT || 4000;
+
 
 server.listen(PORT, () => {
     console.log(`🚀 Сервер працює на http://localhost:${PORT}`);
