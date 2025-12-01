@@ -472,9 +472,10 @@ io.on('connection', (socket) => {
 
 // Запуск сервера
 const PORT = process.env.PORT || 4000;
-app.get('(.*)', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
 server.listen(PORT, () => {
     console.log(`🚀 Сервер працює на http://localhost:${PORT}`);
 });
