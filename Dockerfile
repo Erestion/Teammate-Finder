@@ -6,7 +6,8 @@ WORKDIR /app
 
 # 3. Копіюємо файли пакетів і встановлюємо залежності
 COPY package*.json ./
-RUN VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} npm run build
+RUN VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} 
+npm run build
 
 # 4. Копіюємо весь код проекту
 COPY . .
