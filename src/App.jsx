@@ -10,7 +10,8 @@ import ProfileDialog from "./components/ProfileDialog.jsx";
 import ChatListDialog from "./components/ChatListDialog.jsx"; 
 import { DICT, initialPosts as seed } from "./data.js";
 import { API_BASE } from "./config"; 
-import { io } from "socket.io-client"; // Не забудь встановити: npm install socket.io-client
+import { io } from "socket.io-client";
+import { SOCKET_URL } from "./config";
 
 // --- ХЕЛПЕРИ ---
 function useLocalFavorites() {
@@ -111,7 +112,9 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const socket = io();
+    const socket = io(SOCKET_URL, {
+    transports: ["websocket"],
+});
     const notificationChannel = `notification:${currentUser.id}`;
 
     socket.on(notificationChannel, (data) => {

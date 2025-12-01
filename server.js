@@ -12,17 +12,25 @@ const Chat = require('./models/Chat');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-
-// --- НАЛАШТУВАННЯ MIDDLEWARE ---
-app.use(express.json()); // Дозволяє читати JSON з тіла запиту
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'dist')));
-
-app.use(function (req, res) {
-	
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+const io = new Server(server, {
+    cors: {
+        origin: FRONTEND_ORIGIN,
+        methods: ["GET", "POST"],
+        credentials: true,
+    }
 });
+
+
+const FRONTEND_ORIGIN = process.env.FRONTEND_URL || process.env.VITE_API_URL || '*';
+
+const cors = require('cors');
+app.use(cors({
+    origin: FRONTEND_ORIGIN,
+    credentials: true,
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // --- ПІДКЛЮЧЕННЯ ДО MONGODB ATLAS ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -467,6 +475,9 @@ io.on('connection', (socket) => {
 
 // Запуск сервера
 const PORT = process.env.PORT || 4000;
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 server.listen(PORT, () => {
     console.log(`🚀 Сервер працює на http://localhost:${PORT}`);
 });
