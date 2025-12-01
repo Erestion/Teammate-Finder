@@ -19,9 +19,8 @@ app.use(express.json()); // Дозволяє читати JSON з тіла за�
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// --- ФОЛБЕК ДЛЯ REACT ROUTER ---
-// Це потрібно, щоб React обробляв всі шляхи сам, а сервер віддавав index.html
-app.get('*', (req, res) => {
+app.use(function (req, res) {
+	
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
