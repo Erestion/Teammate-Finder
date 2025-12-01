@@ -15,7 +15,8 @@ RUN VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 COPY . .
 
 # 5. Робимо білд фронтенду (всередині контейнера)
-RUN VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} npm run build
+RUN echo "VITE_GOOGLE_CLIENT_ID під час збірки: ${VITE_GOOGLE_CLIENT_ID}"
+RUN VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID npm run build
 
 # 6. Відкриваємо порт 4000 (внутрішній)
 EXPOSE 4000
