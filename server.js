@@ -163,7 +163,7 @@ app.put('/api/users/:userId', async (req, res) => {
 });
 
 const { OAuth2Client } = require('google-auth-library');
-const GOOGLE_CLIENT_ID = "998358639410-th99n907dqh09f38av4it7eerlrcl9bd.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // 4. Вхід через Google

@@ -13,7 +13,7 @@ const AuthDialog = forwardRef(
     useEffect(() => {
       if (window.google && googleBtnRef.current) {
         window.google.accounts.id.initialize({
-          client_id: "998358639410-th99n907dqh09f38av4it7eerlrcl9bd.apps.googleusercontent.com",
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           callback: onGoogleLogin,
         });
         window.google.accounts.id.renderButton(googleBtnRef.current, { theme: "outline", size: "large", width: "300" });
