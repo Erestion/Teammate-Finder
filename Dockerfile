@@ -6,14 +6,14 @@ WORKDIR /app
 
 # 3. Копіюємо файли пакетів і встановлюємо залежності
 COPY package*.json ./
-npm install 
+RUN npm install 
 
 
 # 4. Копіюємо весь код проекту
 COPY . .
 
 # 5. Робимо білд фронтенду (всередині контейнера)
-npm run build
+RUN VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID npm run build
 
 # 6. Відкриваємо порт 4000 (внутрішній)
 EXPOSE 4000
