@@ -107,6 +107,15 @@ export default function App() {
   const [messageTarget, setMessageTarget] = useState(null);
   const [currentChat, setCurrentChat] = useState(null);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  
+  const clearAll = () => {
+    setQ("");
+    setSelectedTags(new Set());
+    setFlt({ game: "", level: "", lang: "", platform: "", time: "" });
+    setSortBy("score");
+    setSavedOnly(false);
+  };
+    
 
   // --- 1. ЗВУКОВЕ СПОВІЩЕННЯ ---
   useEffect(() => {
@@ -408,6 +417,8 @@ export default function App() {
             onInboxClick={openInbox} 
         />
       </div>
+	  
+
 
       <main className="wrap main-layout">
         <Toolbar dict={{...DICT, games}} selectedTags={selectedTags} toggleTag={t => { const n=new Set(selectedTags); n.has(t)?n.delete(t):n.add(t); setSelectedTags(n); }} flt={flt} setFlt={setFlt} className={isToolbarOpen?"is-open":""} onClose={()=>setIsToolbarOpen(false)} />
@@ -419,6 +430,39 @@ export default function App() {
                 currentUser={currentUser} onLike={onLike} 
             />
         </div>
+		
+			  <div className="resultbar" style={{ gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={savedOnly}
+                  onChange={(e) => setSavedOnly(e.target.checked)}
+                />
+                <span>Saved only</span>
+              </label>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span>Sort by</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                id="sortBy"
+              >
+                <option value="score">Best match</option>
+                <option value="date">Newest</option>
+                <option value="title">Title A–Z</option>
+              </select>
+            </div>
+          </div>
+		
       </main>
 
       <CreatePostDialog ref={createDlgRef} dict={{...DICT, games}} onCancel={closeCreate} onSave={createPost} />
