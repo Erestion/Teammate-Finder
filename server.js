@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const path = require('path');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const fs = require('fs');
 
 // Імпортуємо моделі
 const User = require('./models/User');
@@ -28,6 +29,23 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // Ваш Client ID
+const indexPath = path.join(__dirname, 'dist', 'index.html');
+
+let cachedHtml = '';
+
+try {
+    const originalHtml = fs.readFileSync(indexPath, 'utf8');
+    // Інжекція: замінюємо тег-плейсхолдер на реальний скрипт
+    cachedHtml = originalHtml.replace(
+        '<script id="client-id-placeholder"></script>',
+        `<script>window.GOOGLE_CLIENT_ID = '${CLIENT_ID}';</script>`
+    );
+    console.log("✅ HTML з Client ID успішно кешовано!");
+} catch (e) {
+    console.error("❌ ПОМИЛКА ЧИТАННЯ index.html:", e.message);
+}
 
 // --- ПІДКЛЮЧЕННЯ ДО MONGODB ATLAS ---
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -475,21 +493,13 @@ io.on('connection', (socket) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 app.use((req, res) => {
-    const indexPath = path.join(__dirname, 'dist', 'index.html');
-    fs.readFile(indexPath, 'utf8', (err, htmlContent) => {
-        if (err) {
-            console.error('Error reading index.html:', err);
-            return res.status(500).send('Server Error');
-        }
-
-
-        const finalHtml = htmlContent.replace(
-            '</head>',
-            `<script>window.GOOGLE_CLIENT_ID = '${process.env.GOOGLE_CLIENT_ID}';</script></head>`
-        );
-
-        res.send(finalHtml);
-    });
+    if (cachedHtml) {
+        // Відправляємо кешовану версію
+        res.send(cachedHtml);
+    } else {
+        // Якщо не вдалося завантажити
+        res.sendFile(indexPath);
+    }
 });
 
 // Запуск сервера
