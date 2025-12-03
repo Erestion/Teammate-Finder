@@ -1,187 +1,183 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 
-export default function Grid({
-  items,
-  formatAgo,
-  favorites,
-  onToggleFavorite,
-  onMessage,
-  onEdit,
-  onDelete,
-  onCopyLink,
-  currentUser,
-  onLike // <--- Додали функцію лайка
-}) {
-  const [expanded, setExpanded] = useState(() => new Set());
+// --- 1. ОКРЕМИЙ КОМПОНЕНТ КАРТКИ (Оптимізація рендеру) ---
+const PostCard = memo(({ 
+  p, 
+  index, // для анімації появи
+  formatAgo, 
+  favorites, 
+  onToggleFavorite, 
+  onMessage, 
+  onEdit, 
+  onDelete, 
+  onCopyLink, 
+  currentUser, 
+  onLike 
+}) => {
+  // Стейт "Read more" тепер локальний для кожної картки
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const isNew = (iso) =>
-    Date.now() - new Date(iso).getTime() < 24 * 60 * 60 * 1000;
-
-  const toggleExpand = (id) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const isNew = (iso) => {
+    if (!iso) return false;
+    return Date.now() - new Date(iso).getTime() < 24 * 60 * 60 * 1000;
   };
+
+  // Перевірки
+  const fav = favorites.has(p.id);
+  const canEdit = (currentUser && p.author && currentUser.username === p.author.name) || (currentUser?.isAdmin);
+  
+  // Аватар (Dicebear як фолбек)
+  const avatarSrc = p.author?.avatar 
+    ? p.author.avatar 
+    : `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(p.author?.name || "anon")}`;
+
+  // Лайки
+  const isLiked = p.likes && currentUser && p.likes.includes(currentUser.id);
+  const likesCount = p.likes ? p.likes.length : 0;
+
+  return (
+    <article
+      id={p.id} // <--- КРИТИЧНО ВАЖЛИВО ДЛЯ СКРОЛУ
+      className="card animate-stagger"
+      style={{ animationDelay: `${index * 50}ms` }}
+    >
+      <div className="card__head">
+        <div className="card__head-left">
+          <img
+            className="avatar"
+            src={avatarSrc}
+            alt={p.author?.name || "User"}
+            loading="lazy" // <--- Ліниве завантаження картинок
+            style={{ objectFit: "cover", background: "#eee" }} 
+          />
+          
+          <div>
+            <div className="titleline">
+              <h4 className="title" title={p.title}>{p.title}</h4>
+              {isNew(p.createdAt) && (
+                <span className="badge badge--new">NEW</span>
+              )}
+            </div>
+            <div className="meta">
+              <span className="author-name">{p.author?.name}</span> • {p.game} • {p.level} • {p.lang} • {p.platform} • {formatAgo(p.createdAt)}
+            </div>
+          </div>
+        </div>
+
+        <div className="card__actions">
+          <button
+            className="btn btn--icon"
+            type="button"
+            onClick={() => onCopyLink(p.id)}
+            title="Copy Link"
+          >
+            🔗
+          </button>
+
+          {canEdit && (
+            <>
+              <button
+                className="btn btn--icon"
+                type="button"
+                onClick={() => onEdit(p)}
+                title="Edit Post"
+              >
+                ✎
+              </button>
+              <button
+                className="btn btn--icon btn-icon--danger"
+                type="button"
+                onClick={() => onDelete(p.id)}
+                title="Delete Post"
+              >
+                🗑️
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <p className={`desc ${isExpanded ? "desc--open" : ""}`}>
+        {p.desc}
+      </p>
+      
+      {/* Показуємо кнопку тільки якщо текст довгий */}
+      {p.desc && p.desc.length > 120 && (
+        <button
+          className="btn btn--ghost btn--small"
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          {isExpanded ? "Read less" : "Read more"}
+        </button>
+      )}
+
+      <div className="tags">
+        {(p.tags || []).map((t) => (
+          <span className="tag" key={t}>#{t}</span>
+        ))}
+      </div>
+
+      <div className="card__foot" style={{ justifyContent: "flex-end" }}> 
+        <div style={{ display: "flex", gap: 8 }}>
+          
+          <button
+            className="btn"
+            onClick={() => onLike(p.id)}
+            type="button"
+            style={{ 
+                minWidth: '60px', 
+                borderColor: isLiked ? '#ffd700' : 'var(--border)',
+                color: isLiked ? '#d4af37' : 'var(--text-main)'
+            }}
+            title={isLiked ? "Unlike" : "Like"}
+          >
+            {isLiked ? "★" : "☆"} 
+            <span style={{marginLeft: 6, fontWeight: 'bold'}}>
+                {likesCount}
+            </span>
+          </button>
+
+          <button
+            className="btn"
+            onClick={() => onToggleFavorite(p.id)}
+            type="button"
+            title={fav ? "Remove from saved" : "Save post"}
+          >
+            {fav ? "★ Saved" : "☆ Save"}
+          </button>
+          
+          {(!currentUser || currentUser.username !== p.author?.name) && (
+            <button
+              className="btn btn--primary"
+              type="button"
+              onClick={() => onMessage(p)}
+            >
+              Message
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+});
+
+// --- 2. ГОЛОВНИЙ КОМПОНЕНТ GRID (Тепер чистий і легкий) ---
+export default function Grid({ items, ...props }) {
+  if (!items || items.length === 0) {
+    return null; 
+  }
 
   return (
     <section className="grid" id="grid">
-      {items.map((p, index) => {
-        const fav = favorites.has(p.id);
-        const opened = expanded.has(p.id);
-        
-        // --- ЛОГІКА ДОСТУПУ (АВТОР АБО АДМІН) ---
-        const canEdit = (currentUser && p.author && currentUser.username === p.author.name) || (currentUser?.isAdmin);
-
-        // --- ЛОГІКА АВАТАРА ---
-        const avatarSrc = p.author?.avatar 
-            ? p.author.avatar 
-            : `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(p.author?.name || "anon")}`;
-
-        // --- ЛОГІКА ЛАЙКА ---
-        const isLiked = p.likes && currentUser && p.likes.includes(currentUser.id);
-        const likesCount = p.likes ? p.likes.length : 0;
-
-        return (
-          <article
-            key={p.id}
-            id={p.id}
-            className="card animate-stagger"
-            role="article"
-            aria-label={p.title}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <div className="card__head">
-              <div className="card__head-left">
-                {/* АВАТАР */}
-                <img
-                  className="avatar"
-                  src={avatarSrc}
-                  alt={p.author?.name || "User"}
-                  style={{ objectFit: "cover", background: "#eee" }} 
-                />
-                
-                {/* ТЕКСТ ШАПКИ */}
-                <div>
-                  <div className="titleline">
-                    <h4 className="title">{p.title}</h4>
-                    {isNew(p.createdAt) && (
-                      <span className="badge badge--new">NEW</span>
-                    )}
-                  </div>
-                  <div className="meta">
-                    <span style={{ fontWeight: "bold", color: "var(--text-main)" }}>{p.author?.name}</span> • {p.game} • {p.level} • {p.lang} • {p.platform} • {formatAgo(p.createdAt)}
-                  </div>
-                </div>
-              </div>
-
-              {/* КНОПКИ ДІЙ (Справа зверху) */}
-              <div className="card__actions">
-                  <button
-                    className="btn btn--icon"
-                    type="button"
-                    onClick={() => onCopyLink(p.id)}
-                    aria-label="Copy link"
-                    title="Copy Link"
-                  >
-                    🔗
-                  </button>
-
-                  {/* Кнопки редагування (тільки для автора/адміна) */}
-                  {canEdit && (
-                    <>
-                      <button
-                        className="btn btn--icon"
-                        type="button"
-                        onClick={() => onEdit(p)}
-                        aria-label="Edit"
-                        title="Edit Post"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="btn btn--icon btn-icon--danger"
-                        type="button"
-                        onClick={() => onDelete(p.id)}
-                        aria-label="Delete"
-                        title="Delete Post"
-                      >
-                        🗑️
-                      </button>
-                    </>
-                  )}
-              </div>
-            </div>
-
-            {/* ОПИС */}
-            <p className={`desc ${opened ? "desc--open" : ""}`}>{p.desc}</p>
-            {p.desc && p.desc.length > 120 && (
-              <button
-                className="btn btn--ghost btn--small"
-                type="button"
-                onClick={() => toggleExpand(p.id)}
-              >
-                {opened ? "Read less" : "Read more"}
-              </button>
-            )}
-
-            {/* ТЕГИ */}
-            <div className="tags">
-              {p.tags.map((t) => (
-                <span className="tag" key={t}>
-                  #{t}
-                </span>
-              ))}
-            </div>
-
-            {/* ФУТЕР (Кнопки внизу) */}
-            <div className="card__foot" style={{ justifyContent: "flex-end" }}> 
-              
-              <div style={{ display: "flex", gap: 8 }}>
-                
-                {/* --- НОВА КНОПКА ЛАЙК --- */}
-                <button
-                  className="btn"
-                  onClick={() => onLike(p.id)}
-                  type="button"
-                  style={{ 
-                      minWidth: '60px', 
-                      borderColor: isLiked ? '#ffd700' : 'var(--border)',
-                      color: isLiked ? '#d4af37' : 'var(--text-main)'
-                  }}
-                  title="Like"
-                >
-                  {isLiked ? "★" : "☆"} 
-                  <span style={{marginLeft: 6, fontWeight: 'bold'}}>
-                      {likesCount}
-                  </span>
-                </button>
-
-                {/* Кнопка SAVE (Локально) */}
-                <button
-                  className="btn"
-                  onClick={() => onToggleFavorite(p.id)}
-                  type="button"
-                >
-                  {fav ? "★ Saved" : "☆ Save"}
-                </button>
-                
-                {/* Кнопка MESSAGE */}
-                {(!currentUser || currentUser.username !== p.author.name) && (
-                    <button
-                    className="btn btn--primary"
-                    type="button"
-                    onClick={() => onMessage(p)}
-                    >
-                    Message
-                    </button>
-                )}
-              </div>
-            </div>
-          </article>
-        );
-      })}
+      {items.map((p, index) => (
+        <PostCard 
+          key={p.id} 
+          p={p} 
+          index={index} 
+          {...props} // Прокидаємо всі функції (onLike, onEdit...) вниз
+        />
+      ))}
     </section>
   );
 }

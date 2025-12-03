@@ -103,6 +103,10 @@ export default function App() {
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   
+  // --- PAGINATION STATE ---
+  const PAGE_SIZE = 9; // Скільки карток показувати за раз
+  const [page, setPage] = useState(1);
+  
   // Стейт чату
   const [messageTarget, setMessageTarget] = useState(null);
   const [currentChat, setCurrentChat] = useState(null);
@@ -365,17 +369,113 @@ export default function App() {
   const [favorites, setFavorites] = useLocalFavorites();
   const toggleFavorite = (id) => { const n = new Set(favorites); n.has(id)?n.delete(id):n.add(id); setFavorites(n); };
   
-  const visible = useMemo(() => {
-      return posts.filter(p => {
-          if (savedOnly && !favorites.has(p.id)) return false;
-          // ... фільтри ...
-          if (q) { 
-              const h = (p.title+" "+p.desc+" "+p.game).toLowerCase(); 
-              if (!h.includes(q.toLowerCase())) return false; 
-          }
-          return true;
-      });
-  }, [posts, q, savedOnly, favorites]); 
+Є дві помилки у коді логіки, який ти надіслав вище:
+
+    Циклічна залежність: Ти намагаєшся створити змінну paginatedPosts всередині useMemo, використовуючи змінну visible, яку цей useMemo ще тільки створює. Це призведе до помилки.
+
+    Scope (Область видимості): hasMore ти обчислюєш всередині useEffect, тому він недоступний для рендеру (JSX).
+
+Ось виправлена логіка і приклад рендеру (Крок 4), який ти просив.
+Частина 1: Виправлена Логіка (встав це перед return)
+
+Заміни свій блок visible та useEffect на цей код. Тут чітко розділено: 1) фільтрацію всіх постів, 2) скидання сторінки, 3) нарізку для відображення.
+JavaScript
+
+// --- 1. ФІЛЬТРАЦІЯ ТА СОРТУВАННЯ (ПОВНИЙ СПИСОК) ---
+// Цей useMemo обчислює повний, відсортований список
+const visible = useMemo(() => {
+    // Спочатку фільтруємо
+    const filtered = posts.filter(p => {
+        if (savedOnly && !favorites.has(p.id)) return false;
+        if (selectedTags.size > 0) {
+            const postTags = new Set(p.tags || []);
+            for (const t of selectedTags) {
+                if (!postTags.has(t)) return false;
+            }
+        }
+        if (flt.game && p.game !== flt.game) return false;
+        if (flt.level && p.level !== flt.level) return false;
+        if (flt.lang && p.lang !== flt.lang) return false;
+        if (flt.platform && p.platform !== flt.platform) return false;
+        if (flt.time && p.time !== flt.time) return false;
+        if (q) {
+            const h = (p.title + " " + (p.desc || "") + " " + p.game).toLowerCase();
+            if (!h.includes(q.toLowerCase())) return false;
+        }
+        return true;
+    });
+
+    // Потім сортуємо
+    return filtered.sort((a, b) => {
+        switch (sortBy) {
+            case "date":
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            case "title":
+                return a.title.localeCompare(b.title);
+            case "score":
+            default:
+                const likesA = Array.isArray(a.likes) ? a.likes.length : 0;
+                const likesB = Array.isArray(b.likes) ? b.likes.length : 0;
+                if (likesB !== likesA) return likesB - likesA;
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        }
+    });
+
+}, [posts, q, savedOnly, favorites, flt, selectedTags, sortBy]);
+
+// ----------------------------------------------------------------------
+
+// --- 2. СКИДАННЯ СТОРІНКИ ПРИ ЗМІНІ ФІЛЬТРІВ ---
+
+useEffect(() => {
+    setPage(1);
+    // ❌ ВАЖЛИВО: Змінні пагінації (hasMore, paginatedPosts) не потрібні тут
+}, [q, selectedTags, flt, sortBy, savedOnly]);
+
+// ----------------------------------------------------------------------
+
+// --- 3. НАРІЗКА (PAGINATION) ---
+
+const paginatedPosts = visible.slice(0, page * PAGE_SIZE);
+const hasMore = visible.length > paginatedPosts.length;
+  
+  useEffect(() => {
+    // Чекаємо, поки завантажаться пости
+    if (posts.length === 0) return;
+
+    // Перевіряємо, чи є хеш в URL (наприклад, #post123)
+    const hash = window.location.hash.slice(1);
+    
+    if (hash) {
+      // Робимо паузу, щоб React встиг відмалювати Grid з новими постами
+      setTimeout(() => {
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Опціонально: блимнути, щоб привернути увагу (якщо є CSS для цього)
+          el.style.transition = "background 0.5s";
+          const oldBg = el.style.backgroundColor;
+          el.style.backgroundColor = "rgba(255, 255, 0, 0.3)"; // Жовта підсвітка
+          setTimeout(() => { el.style.backgroundColor = oldBg; }, 1500);
+        }
+      }, 500);
+    }
+  }, [posts]); // Цей ефект спрацює щоразу, коли оновиться список постів
+  
+  
+  const onCopyLink = async (id) => {
+    // Формуємо повне посилання з ID в кінці
+    const url = `${window.location.origin}${window.location.pathname}${window.location.search}#${id}`;
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("Посилання на пост скопійовано в буфер обміну!");
+    } catch (err) {
+      console.error("Не вдалося скопіювати:", err);
+      // Запасний варіант, якщо буфер недоступний
+      prompt("Ваш браузер не дозволив авто-копіювання. Скопіюйте вручну:", url);
+    }
+  };
   
   const closeCreate = () => createDlgRef.current?.close();
   const closeMessage = () => { msgDlgRef.current?.close(); setMessageTarget(null); setCurrentChat(null); };
@@ -420,49 +520,82 @@ export default function App() {
 	  
 
 
-      <main className="wrap main-layout">
-        <Toolbar dict={{...DICT, games}} selectedTags={selectedTags} toggleTag={t => { const n=new Set(selectedTags); n.has(t)?n.delete(t):n.add(t); setSelectedTags(n); }} flt={flt} setFlt={setFlt} className={isToolbarOpen?"is-open":""} onClose={()=>setIsToolbarOpen(false)} />
+<main className="wrap main-layout">
+        <Toolbar 
+            dict={{...DICT, games}} 
+            selectedTags={selectedTags} 
+            toggleTag={t => { const n=new Set(selectedTags); n.has(t)?n.delete(t):n.add(t); setSelectedTags(n); }} 
+            flt={flt} 
+            setFlt={setFlt} 
+            className={isToolbarOpen?"is-open":""} 
+            onClose={()=>setIsToolbarOpen(false)} 
+        />
+
         <div className="content-area">
-            <Grid 
-                items={visible} formatAgo={formatAgo} favorites={favorites} 
-                onToggleFavorite={toggleFavorite} onMessage={openMessage} 
-                onEdit={onEdit} onDelete={onDelete} onCopyLink={onCopyLink} 
-                currentUser={currentUser} onLike={onLike} 
-            />
+            {/* --- ПАНЕЛЬ СОРТУВАННЯ ТА ФІЛЬТРІВ (Перенесено вгору для зручності) --- */}
+            <div className="resultbar" style={{ gap: 12, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                        <input
+                            type="checkbox"
+                            checked={savedOnly}
+                            onChange={(e) => setSavedOnly(e.target.checked)}
+                        />
+                        <span>Saved only</span>
+                    </label>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>Sort by</span>
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        id="sortBy"
+                    >
+                        <option value="score">Best match</option>
+                        <option value="date">Newest</option>
+                        <option value="title">Title A–Z</option>
+                    </select>
+                </div>
+                {/* Показуємо кількість знайденого */}
+                <div style={{marginLeft: "auto", color: "#888", fontSize: "0.9em"}}>
+                    Found: {visible.length}
+                </div>
+            </div>
+
+            {/* --- СПИСОК ПОСТІВ АБО EMPTY STATE --- */}
+            {visible.length === 0 ? (
+                <div className="empty">No results. Try removing some filters.</div>
+            ) : (
+                <>
+                    {/* ТУТ ПЕРЕДАЄМО paginatedPosts ЗАМІСТЬ visible */}
+                    <Grid 
+                        items={paginatedPosts} 
+                        formatAgo={formatAgo} 
+                        favorites={favorites} 
+                        onToggleFavorite={toggleFavorite} 
+                        onMessage={openMessage} 
+                        onEdit={onEdit} 
+                        onDelete={onDelete} 
+                        onCopyLink={onCopyLink} 
+                        currentUser={currentUser} 
+                        onLike={onLike} 
+                    />
+
+                    {/* --- КНОПКА LOAD MORE --- */}
+                    {hasMore && (
+                        <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 30 }}>
+                            <button 
+                                className="btn btn--secondary"
+                                onClick={() => setPage(p => p + 1)}
+                                style={{ minWidth: 200 }}
+                            >
+                                Load More ({visible.length - paginatedPosts.length} left)
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
-		
-			  <div className="resultbar" style={{ gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  cursor: "pointer",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={savedOnly}
-                  onChange={(e) => setSavedOnly(e.target.checked)}
-                />
-                <span>Saved only</span>
-              </label>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span>Sort by</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                id="sortBy"
-              >
-                <option value="score">Best match</option>
-                <option value="date">Newest</option>
-                <option value="title">Title A–Z</option>
-              </select>
-            </div>
-          </div>
-		
       </main>
 
       <CreatePostDialog ref={createDlgRef} dict={{...DICT, games}} onCancel={closeCreate} onSave={createPost} />

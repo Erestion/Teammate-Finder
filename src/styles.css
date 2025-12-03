@@ -908,3 +908,14 @@ dialog {
   animation: fadeInUp 0.5s ease-out forwards;
   opacity: 0; /* Початковий стан */
 }
+
+/* Анімація для підсвітки знайденого поста */
+@keyframes flash-highlight {
+  0% { background-color: rgba(255, 215, 0, 0.4); box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+  100% { background-color: var(--surface); box-shadow: none; }
+}
+
+.highlight-flash {
+  animation: flash-highlight 1.5s ease-out forwards;
+  border-color: #ffd700 !important;
+}
