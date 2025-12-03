@@ -10,16 +10,18 @@ const AuthDialog = forwardRef(
     const [localError, setLocalError] = useState("");
     const googleBtnRef = useRef(null);
 
-    useEffect(() => {
-	  console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
-      if (window.google && googleBtnRef.current) {
+useEffect(() => {
+
+    const clientID = window.GOOGLE_CLIENT_ID;
+
+    if (window.google && googleBtnRef.current && clientID) {
         window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: onGoogleLogin,
+            client_id: clientID, 
+            callback: onGoogleLogin,
         });
         window.google.accounts.id.renderButton(googleBtnRef.current, { theme: "outline", size: "large", width: "300" });
-      }
-    }, [onGoogleLogin]);
+    }
+}, [onGoogleLogin]);
 
     const handleSubmit = async (e) => {
       e.preventDefault();

@@ -473,7 +473,21 @@ io.on('connection', (socket) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    const indexPath = path.join(__dirname, 'dist', 'index.html');
+    fs.readFile(indexPath, 'utf8', (err, htmlContent) => {
+        if (err) {
+            console.error('Error reading index.html:', err);
+            return res.status(500).send('Server Error');
+        }
+
+
+        const finalHtml = htmlContent.replace(
+            '</head>',
+            `<script>window.GOOGLE_CLIENT_ID = '${process.env.GOOGLE_CLIENT_ID}';</script></head>`
+        );
+
+        res.send(finalHtml);
+    });
 });
 
 // Запуск сервера
