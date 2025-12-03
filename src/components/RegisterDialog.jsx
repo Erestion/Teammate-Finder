@@ -19,7 +19,17 @@ useEffect(() => {
             client_id: clientID, 
             callback: onGoogleLogin,
         });
-        window.google.accounts.id.renderButton(googleBtnRef.current, { theme: "outline", size: "large", width: "300" });
+		//лог для перевірки, чи це місце виконується
+        console.log("GSI: Початок рендерингу кнопки"); 
+        
+        window.google.accounts.id.renderButton(googleBtnRef.current, { 
+            theme: "outline", 
+            size: "large", 
+            width: "300" 
+        });
+    } else {
+        // Додайте лог для перевірки, чому не рендериться
+        console.log("GSI: Відкладено рендеринг. Google:", !!window.google, "Ref:", !!googleBtnRef.current, "ID:", !!clientID);
     }
 }, [onGoogleLogin]);
 
