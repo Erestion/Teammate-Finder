@@ -32,6 +32,8 @@ app.use(express.urlencoded({ extended: true }));
 // --- ПІДКЛЮЧЕННЯ ДО MONGODB ATLAS ---
 const MONGODB_URI = process.env.MONGODB_URI;
 
+console.log(`[DIAGNOSTICS] GOOGLE_CLIENT_ID (Runtime): ${process.env.GOOGLE_CLIENT_ID}`);
+
 mongoose.connect(MONGODB_URI)
     .then(() => console.log('✅ База Даних підключена успішно!'))
     .catch(err => {
