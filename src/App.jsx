@@ -428,27 +428,40 @@ const paginatedPosts = visible.slice(0, page * PAGE_SIZE);
 const hasMore = visible.length > paginatedPosts.length;
   
   useEffect(() => {
-    // Чекаємо, поки завантажаться пости
-    if (posts.length === 0) return;
+    // 1. Якщо даних ще немає - чекаємо
+    if (visible.length === 0) return;
 
-    // Перевіряємо, чи є хеш в URL (наприклад, #post123)
+    // 2. Перевіряємо хеш в URL
     const hash = window.location.hash.slice(1);
-    
-    if (hash) {
-      // Робимо паузу, щоб React встиг відмалювати Grid з новими постами
+    if (!hash) return;
+
+    // 3. Шукаємо індекс цього поста у ВІДФІЛЬТРОВАНОМУ списку
+    const targetIndex = visible.findIndex(p => p.id === hash);
+
+    if (targetIndex !== -1) {
+      // 4. Рахуємо, скільки сторінок треба відкрити
+      const requiredPage = Math.ceil((targetIndex + 1) / PAGE_SIZE);
+
+      // 5. Якщо пост далі, ніж поточна сторінка -> відкриваємо потрібну
+      if (requiredPage > page) {
+        setPage(requiredPage);
+      }
+
+      // 6. Скролимо
       setTimeout(() => {
         const el = document.getElementById(hash);
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "center" });
-          // Опціонально: блимнути, щоб привернути увагу (якщо є CSS для цього)
+          
+          // Ефект підсвітки
           el.style.transition = "background 0.5s";
           const oldBg = el.style.backgroundColor;
-          el.style.backgroundColor = "rgba(255, 255, 0, 0.3)"; // Жовта підсвітка
+          el.style.backgroundColor = "rgba(255, 215, 0, 0.2)"; 
           setTimeout(() => { el.style.backgroundColor = oldBg; }, 1500);
         }
-      }, 500);
+      }, 100);
     }
-  }, [posts]); // Цей ефект спрацює щоразу, коли оновиться список постів
+  }, [visible]); // Важливо: залежить від visible
   
   
   const onCopyLink = async (id) => {
