@@ -86,7 +86,12 @@ app.post('/api/register', async (req, res) => {
         await newUser.save(); // Зберігаємо в MongoDB Atlas
 
         console.log(`✅ Успішно створено юзера: ${username}`);
-        res.status(201).json({ message: 'Користувач успішно створений!', userId: newUser._id });
+        res.status(201).json({ message: 'Користувач успішно створений!',
+		                       userId: newUser._id,
+		                       username: newUser.username,
+							   isAdmin: newUser.isAdmin,
+							   profile: newUser.profile
+							   });
 
     } catch (error) {
         console.error("❌ Помилка реєстрації:", error);
