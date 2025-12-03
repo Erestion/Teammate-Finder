@@ -489,7 +489,6 @@ const hasMore = visible.length > paginatedPosts.length;
         }
       } catch (e) { alert("Error"); }
   };
-  const onCopyLink = () => alert("Copied");
 
   return (
     <>
