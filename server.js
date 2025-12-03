@@ -490,7 +490,7 @@ io.on('connection', (socket) => {
     });
 });
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
 app.use((req, res) => {
     const indexPath = path.join(__dirname, 'dist', 'index.html');
