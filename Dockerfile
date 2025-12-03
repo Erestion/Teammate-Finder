@@ -6,7 +6,7 @@ WORKDIR /app
 
 # 3. Копіюємо файли пакетів і встановлюємо залежності
 COPY package*.json ./
-RUN npm install 
+npm install 
 
 
 # 4. Копіюємо весь код проекту
