@@ -493,13 +493,32 @@ io.on('connection', (socket) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 app.use((req, res) => {
-    if (cachedHtml) {
-        // Відправляємо кешовану версію
-        res.send(cachedHtml);
-    } else {
-        // Якщо не вдалося завантажити
-        res.sendFile(indexPath);
-    }
+    const indexPath = path.join(__dirname, 'dist', 'index.html');
+
+    // 1. Читаємо файл кожного разу при запиті (це надійно і швидко для Node.js)
+    fs.readFile(indexPath, 'utf8', (err, htmlContent) => {
+        if (err) {
+            console.error('❌ Error reading index.html:', err);
+            return res.status(500).send('Server Error');
+        }
+
+        // 2. Отримуємо ID (з бекапу, якщо головна змінна раптом підведе)
+        const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+
+        if (!clientId) {
+             console.error("⚠️ УВАГА: GOOGLE_CLIENT_ID не знайдено на сервері!");
+        }
+
+        // 3. Надійна інжекція: вставляємо перед </head>
+        // Ми не шукаємо спеціальний id, ми просто додаємо скрипт у кінець хедеру.
+        const finalHtml = htmlContent.replace(
+            '</head>',
+            `<script>window.GOOGLE_CLIENT_ID = "${clientId}";</script></head>`
+        );
+
+        // 4. Відправляємо модифікований HTML
+        res.send(finalHtml);
+    });
 });
 
 // Запуск сервера
